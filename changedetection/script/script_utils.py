@@ -41,6 +41,33 @@ def get_vssm_kwargs(config):
     )
 
 
+def get_cgssg_kwargs(config):
+    """Extract optional CGSSG parameters from config."""
+    if not hasattr(config.MODEL, "CGSSG"):
+        return dict(
+            use_cgssg=False,
+            cgssg_stages=[4],
+            cgssg_reduction=4,
+            cgssg_alpha_init=0.5,
+            cgssg_learnable_alpha=True,
+            cgssg_return_mask=True,
+        )
+    return dict(
+        use_cgssg=config.MODEL.CGSSG.ENABLED,
+        cgssg_stages=list(config.MODEL.CGSSG.STAGES),
+        cgssg_reduction=config.MODEL.CGSSG.REDUCTION,
+        cgssg_alpha_init=config.MODEL.CGSSG.ALPHA_INIT,
+        cgssg_learnable_alpha=config.MODEL.CGSSG.LEARNABLE_ALPHA,
+        cgssg_return_mask=config.MODEL.CGSSG.RETURN_MASK,
+    )
+
+
+def get_cgssg_mask_loss_weight(config):
+    if not hasattr(config.MODEL, "CGSSG"):
+        return 0.0
+    return float(config.MODEL.CGSSG.MASK_LOSS_WEIGHT)
+
+
 def add_weight_loading_args(parser, *, allow_model_checkpoint=False, allow_resume_training=False):
     parser.add_argument(
         "--encoder_pretrained_path",

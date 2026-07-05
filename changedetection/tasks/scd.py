@@ -11,7 +11,12 @@ from changedetection.engine import BaseInferer, BaseTrainer
 from changedetection.evaluation import SemanticChangeEvaluator
 from changedetection.logging_utils import format_log_block
 from changedetection.models.ChangeMambaSCD import ChangeMambaSCD
-from changedetection.script.script_utils import get_vssm_kwargs, map_labels_to_colors
+from changedetection.script.script_utils import (
+    get_cgssg_kwargs,
+    get_cgssg_mask_loss_weight,
+    get_vssm_kwargs,
+    map_labels_to_colors,
+)
 from changedetection.tasks.metadata import SECOND_COLOR_MAP, SECOND_LABELS
 
 
@@ -19,11 +24,13 @@ class SCDTrainer(BaseTrainer):
     task_name = "scd"
 
     def build_model(self, config):
+        self.cgssg_mask_loss_weight = get_cgssg_mask_loss_weight(config)
         return ChangeMambaSCD(
             output_cd=2,
             output_clf=7,
             pretrained=self.args.encoder_pretrained_path,
             **get_vssm_kwargs(config),
+            **get_cgssg_kwargs(config),
         )
 
     def build_train_loader(self):
@@ -69,15 +76,33 @@ class SCDTrainer(BaseTrainer):
             + 0.75 * (lovasz_loss_cd + 0.5 * (lovasz_loss_clf_t1 + lovasz_loss_clf_t2))
         )
 
+        mask_loss = None
+        if self.cgssg_mask_loss_weight > 0 and getattr(self.model, "last_cgssg_masks", None):
+            valid = (label_clf_t1 != 255) & (label_clf_t2 != 255)
+            binary_change = ((label_clf_t1 != label_clf_t2) & valid).float().unsqueeze(1)
+            mask_losses = []
+            for mask in self.model.last_cgssg_masks.values():
+                target = F.interpolate(binary_change, size=mask.shape[-2:], mode="nearest")
+                valid_mask = F.interpolate(valid.float().unsqueeze(1), size=mask.shape[-2:], mode="nearest")
+                if valid_mask.sum() > 0:
+                    per_pixel = F.binary_cross_entropy(mask, target, reduction="none")
+                    mask_losses.append((per_pixel * valid_mask).sum() / valid_mask.sum())
+            if mask_losses:
+                mask_loss = torch.stack(mask_losses).mean()
+                final_loss = final_loss + self.cgssg_mask_loss_weight * mask_loss
+
         clf_loss = (
             ce_loss_clf_t1 + ce_loss_clf_t2 + lovasz_loss_clf_t1 + lovasz_loss_clf_t2
         ) / 2
+        log_items = {
+            "cd_loss": (ce_loss_cd + lovasz_loss_cd).item(),
+            "clf_loss": clf_loss.item(),
+        }
+        if mask_loss is not None:
+            log_items["mask_loss"] = mask_loss.item()
         return {
             "loss": final_loss,
-            "log_items": {
-                "cd_loss": (ce_loss_cd + lovasz_loss_cd).item(),
-                "clf_loss": clf_loss.item(),
-            },
+            "log_items": log_items,
         }
 
     def evaluate_loader(self, split_name, data_loader):
@@ -160,6 +185,7 @@ class SCDInferer(BaseInferer):
             output_clf=7,
             pretrained=self.args.encoder_pretrained_path,
             **get_vssm_kwargs(config),
+            **get_cgssg_kwargs(config),
         )
 
     def build_data_loader(self):

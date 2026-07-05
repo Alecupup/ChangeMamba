@@ -97,6 +97,16 @@ _C.MODEL.VSSM.DOWNSAMPLE = "v2"
 _C.MODEL.VSSM.PATCHEMBED = "v2"
 _C.MODEL.VSSM.GMLP = False
 
+# Change-Guided Sparse Spatial Gate (CGSSG) for MambaSCD.
+_C.MODEL.CGSSG = CN()
+_C.MODEL.CGSSG.ENABLED = False
+_C.MODEL.CGSSG.STAGES = [4]
+_C.MODEL.CGSSG.REDUCTION = 4
+_C.MODEL.CGSSG.ALPHA_INIT = 0.5
+_C.MODEL.CGSSG.LEARNABLE_ALPHA = True
+_C.MODEL.CGSSG.RETURN_MASK = True
+_C.MODEL.CGSSG.MASK_LOSS_WEIGHT = 0.0
+
 # -----------------------------------------------------------------------------
 # Training settings
 # -----------------------------------------------------------------------------
