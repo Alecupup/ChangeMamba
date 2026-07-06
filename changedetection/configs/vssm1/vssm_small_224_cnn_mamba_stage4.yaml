@@ -1,0 +1,18 @@
+BASE: ["vssm_small_224.yaml"]
+
+MODEL:
+  NAME: cnn_mamba_stage4_small
+
+  # Original: full VSSM/Mamba backbone.
+  # New: CNN for stage1-stage3, Mamba/VSSM only for stage4.
+  BACKBONE_TYPE: "cnn_mamba_stage4"
+
+  CNN_MAMBA:
+    # CNN block numbers for stage1, stage2, stage3.
+    # Keep it small first; later you can try [2, 2, 3] or [1, 2, 2].
+    CNN_DEPTHS: [2, 2, 2]
+
+  CGSSG:
+    ENABLED: false
+    STAGES: [4]
+    MASK_LOSS_WEIGHT: 0.0

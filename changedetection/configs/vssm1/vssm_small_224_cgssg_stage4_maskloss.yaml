@@ -1,0 +1,5 @@
+BASE: ["vssm_small_224_cgssg_stage4.yaml"]
+
+MODEL:
+  CGSSG:
+    MASK_LOSS_WEIGHT: 0.1

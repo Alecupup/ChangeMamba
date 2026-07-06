@@ -1,0 +1,11 @@
+BASE: ["vssm_small_224.yaml"]
+
+MODEL:
+  CGSSG:
+    ENABLED: true
+    STAGES: [3, 4]
+    REDUCTION: 4
+    ALPHA_INIT: 0.5
+    LEARNABLE_ALPHA: true
+    RETURN_MASK: true
+    MASK_LOSS_WEIGHT: 0.0
